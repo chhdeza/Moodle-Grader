@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.py[cod]
+dist/
+build/
+*.spec
+.venv/
+*.egg-info/
+*.xlsx
+notas_plan.csv
+notas_plan_resultados.csv
+*.har
+*_debug.html

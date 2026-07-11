@@ -1,0 +1,18 @@
+[project]
+name = "moodle-grader"
+version = "0.1.0"
+description = "Cursor skill and Python utilities for Moodle-assisted grading"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = ["build", "dist", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
