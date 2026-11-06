@@ -4,7 +4,7 @@ from conftest import load_script
 
 download = load_script(
     "moodle_download",
-    ".cursor/skills/moodle-grading/scripts/moodle_download.py",
+    ".claude/skills/moodle-grading/scripts/moodle_download.py",
 )
 
 

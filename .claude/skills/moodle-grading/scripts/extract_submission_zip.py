@@ -6,7 +6,7 @@ Safe against zip-slip; rejects archives exceeding max uncompressed size (zip bom
 Run from workspace root before grading when the folder contains ZIP attachments.
 
 Usage:
-    python .cursor/skills/moodle-grading/scripts/extract_submission_zip.py submissions/assignments/assignment_517559/user_3081
+    python .claude/skills/moodle-grading/scripts/extract_submission_zip.py submissions/assignments/assignment_517559/user_3081
     python .../extract_submission_zip.py path/to/folder --max-mb 200
 """
 

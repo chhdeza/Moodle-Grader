@@ -1,11 +1,11 @@
 # Calificador Moodle + Grade Uploader UNED — Paquete portable
 
-Kit completo y autocontenido para **calificar tareas de Moodle con ayuda del agente de Cursor** y luego **subir las notas oficiales al sistema de Captura de Notas Parciales de la UNED**. Sirve para **cualquier curso**: solo hay que cambiar el nombre del curso, la lista de estudiantes y los IDs de la tarea.
+Kit completo y autocontenido para **calificar tareas de Moodle con ayuda de Claude Code** y luego **subir las notas oficiales al sistema de Captura de Notas Parciales de la UNED**. Sirve para **cualquier curso**: solo hay que cambiar el nombre del curso, la lista de estudiantes y los IDs de la tarea.
 
 Esta carpeta se puede copiar o mover completa a cualquier computadora o workspace. No depende de nada externo, salvo Python 3.10+ y las credenciales que usted configure.
 
 > **Aviso:** este es un proyecto comunitario no oficial; no está afiliado con
-> Moodle, UNED ni Cursor. Quien lo use debe respetar las políticas
+> Moodle, UNED ni Anthropic. Quien lo use debe respetar las políticas
 > institucionales, verificar toda calificación y aprobar manualmente cualquier
 > escritura en sistemas oficiales.
 
@@ -39,17 +39,22 @@ moodle-grader-portable/
 ├── SECURITY.md                   ← Reporte privado de vulnerabilidades
 ├── CONTRIBUTING.md               ← Reglas para contribuciones sin datos reales
 │
-├── .cursor/
-│   ├── rules/
-│   │   └── grading-prompt.mdc    ← Reglas INMUTABLES de calificación (se aplican solas)
+├── CLAUDE.md                     ← Reglas esenciales siempre activas para Claude Code
+├── .claude/
+│   ├── settings.json             ← (opcional, lo crea usted) Permisos del proyecto, ver 2.4
+│   ├── agents/
+│   │   └── moodle-grader.md      ← Subagente que califica UNA entrega (corre en paralelo)
 │   └── skills/moodle-grading/
-│       ├── SKILL.md              ← Flujo de calificación en 8 pasos (lo sigue el agente)
+│       ├── SKILL.md              ← Flujo de calificación en 8 pasos (/moodle-grading)
+│       ├── grading-rules.md      ← Reglas INMUTABLES de calificación
 │       ├── reference.md          ← Referencia CLI de los scripts y formatos de archivo
 │       ├── log-instructions.md   ← Cómo descargar los logs de Moodle
 │       └── scripts/
+│           ├── check_env.py              ← Verifica credenciales sin mostrar secretos
 │           ├── moodle_download.py        ← Descarga las entregas de los estudiantes
 │           ├── extract_users.py          ← Genera Users.md desde logs de Moodle
 │           ├── extract_submission_zip.py ← Extrae ZIPs de las entregas (seguro)
+│           ├── build_summary.py          ← Valida notas contra la rúbrica y genera el resumen
 │           ├── moodle_upload_grades.py   ← Sube nota + feedback a Moodle (opcional)
 │           └── notasparciales_upload.py  ← Copia del uploader (ver grade-uploader/)
 │
@@ -66,16 +71,16 @@ moodle-grader-portable/
 
 | Herramienta | Qué hace |
 |-------------|----------|
-| **Calificador Moodle** | El agente de Cursor descarga las entregas (PDF, imágenes, ZIP), las califica contra la rúbrica oficial y genera nota + retroalimentación por estudiante, más un resumen global. |
+| **Calificador Moodle** | Claude Code descarga las entregas (PDF, imágenes, ZIP), las califica contra la rúbrica oficial y genera nota + retroalimentación por estudiante, más un resumen global. |
 | **Grade Uploader** | Lee las notas finales (xlsx exportado de Moodle) y las sube en lote al sistema oficial de [Captura de Notas Parciales](https://produccion.uned.ac.cr/notasparciales/Formularios/CapturaNotas.aspx) de la UNED. |
 
 ---
 
 ## 2. Preparación inicial (una sola vez)
 
-### 2.1 Abrir la carpeta en Cursor
+### 2.1 Abrir la carpeta en Claude Code
 
-Copie esta carpeta a donde quiera y ábrala en Cursor **como raíz del workspace** (File → Open Folder → `moodle-grader-portable`). Esto es importante: los scripts y el skill usan rutas relativas a la raíz, y las reglas de `.cursor/` solo se activan si esta carpeta es la raíz.
+Copie esta carpeta a donde quiera, abra una terminal **en esa carpeta** (la raíz del workspace) y ejecute `claude`. Esto es importante: los scripts y el skill usan rutas relativas a la raíz, y `CLAUDE.md`, el skill y el subagente de `.claude/` solo se cargan si esta carpeta es la raíz.
 
 ### 2.2 Instalar dependencias
 
@@ -110,22 +115,49 @@ MOODLE_PASSWORD=su_contraseña
 > Si la contraseña tiene caracteres especiales, escríbala entre comillas dobles.
 > El archivo `.env` **nunca** se comparte ni se sube a Git (el `.gitignore` ya lo protege).
 
-Las credenciales del **Grade Uploader** son aparte y se configuran en `grade-uploader/.env` (ver [sección 4.1](#41-configurar-credenciales-del-uploader)). La plantilla de la raíz también trae la sección `NP_*` por si prefiere correr el uploader desde la raíz del workspace (`.cursor/skills/moodle-grading/scripts/notasparciales_upload.py` lee el `.env` de la raíz); si usa `grade-uploader/` como carpeta independiente, puede ignorar esa sección aquí.
+> Claude Code no necesita leer su `.env`: el skill comprueba las credenciales con `check_env.py`, que solo informa qué variables están definidas, sin mostrar valores.
+
+Las credenciales del **Grade Uploader** son aparte y se configuran en `grade-uploader/.env` (ver [sección 4.1](#41-configurar-credenciales-del-uploader)). La plantilla de la raíz también trae la sección `NP_*` por si prefiere correr el uploader desde la raíz del workspace (`.claude/skills/moodle-grading/scripts/notasparciales_upload.py` lee el `.env` de la raíz); si usa `grade-uploader/` como carpeta independiente, puede ignorar esa sección aquí.
+
+### 2.4 (Opcional) Permisos del proyecto
+
+Para evitar confirmaciones repetitivas en los scripts locales y proteger los secretos, puede crear `.claude/settings.json` con:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(python .claude/skills/moodle-grading/scripts/check_env.py*)",
+      "Bash(python .claude/skills/moodle-grading/scripts/extract_users.py*)",
+      "Bash(python .claude/skills/moodle-grading/scripts/extract_submission_zip.py*)",
+      "Bash(python .claude/skills/moodle-grading/scripts/build_summary.py*)"
+    ],
+    "ask": [
+      "Bash(python .claude/skills/moodle-grading/scripts/moodle_upload_grades.py*)",
+      "Bash(python .claude/skills/moodle-grading/scripts/notasparciales_upload.py*)",
+      "Bash(python grade-uploader/notasparciales_upload.py*)"
+    ],
+    "deny": ["Read(./.env)", "Read(./grade-uploader/.env)"]
+  }
+}
+```
+
+Los scripts que escriben en sistemas oficiales (subida a Moodle y a Notas Parciales) siguen pidiendo confirmación en cada ejecución.
 
 ---
 
 ## 3. Cómo usar el calificador de Moodle
 
-El calificador funciona conversando con el **agente de Cursor**: usted da la instrucción y el agente sigue el flujo definido en `SKILL.md`, pidiéndole confirmación en los puntos clave. Estos son los pasos y lo que usted debe hacer en cada uno.
+El calificador funciona conversando con **Claude Code**: usted da la instrucción (o escribe `/moodle-grading`) y el agente sigue el flujo definido en `SKILL.md`, pidiéndole confirmación en los puntos clave. Cada entrega la califica un subagente independiente (`moodle-grader`), en tandas paralelas, y un script (`build_summary.py`) verifica mecánicamente que ninguna nota se salga de la escala de la rúbrica. Estos son los pasos y lo que usted debe hacer en cada uno.
 
 ### 3.1 Configurar el prompt de calificación (por curso)
 
 Abra [prompt.txt](prompt.txt) y:
 
-1. Reemplace `#COURSE NAME PLACEHOLDER#` por el nombre real del curso (ej. «Curso de ejemplo (00000)»). Si no lo hace, el agente lo hará por usted al leer las instrucciones de la tarea.
+1. Reemplace `#COURSE NAME PLACEHOLDER#` por el nombre real del curso (ej. «Curso de ejemplo (00000)»). Si no lo hace, el agente tomará el nombre del curso de las instrucciones de la tarea (sin modificar `prompt.txt`).
 2. Si su curso lo requiere, ajuste las secciones obligatorias de ejemplo (portada, índice, introducción, etc.) y los tipos de ejercicio que se verifican matemáticamente.
 
-**Qué NO se puede cambiar:** las reglas de [.cursor/rules/grading-prompt.mdc](.cursor/rules/grading-prompt.mdc) se aplican siempre y son innegociables: solo puntajes que existan en la escala de la rúbrica (nada de valores intermedios inventados), calificación en español, un solo párrafo de retroalimentación sin el nombre del estudiante, revisión del PDF completo, revisión de imágenes adjuntas y ZIPs antes de concluir que falta evidencia, y resumen final con casos límite para revisión del profesor.
+**Qué NO se puede cambiar:** las reglas de [.claude/skills/moodle-grading/grading-rules.md](.claude/skills/moodle-grading/grading-rules.md) (resumidas en [CLAUDE.md](CLAUDE.md)) se aplican siempre y son innegociables: solo puntajes que existan en la escala de la rúbrica (nada de valores intermedios inventados), calificación en español, un solo párrafo de retroalimentación sin el nombre del estudiante, revisión del PDF completo, revisión de imágenes adjuntas y ZIPs antes de concluir que falta evidencia, y resumen final con casos límite para revisión del profesor.
 
 ### 3.2 Colocar el PDF de instrucciones de la tarea
 
@@ -145,17 +177,19 @@ Se necesitan dos números, ambos visibles en la URL del navegador:
 Dos opciones:
 
 - **A mano:** cree `Users.md` en la raíz siguiendo el formato de [Users.example.md](Users.example.md) (tabla con User ID y nombre completo).
-- **Automático desde logs:** descargue los logs del curso desde Moodle como CSV — guía ilustrada con capturas de pantalla en [.cursor/skills/moodle-grading/log-instructions.md](.cursor/skills/moodle-grading/log-instructions.md) (Informes → Registros → Conseguir estos registros → Descargar como .csv → guardar en el workspace) — y pídale al agente que genere `Users.md`, o córralo usted:
+- **Automático desde logs:** descargue los logs del curso desde Moodle como CSV — guía ilustrada con capturas de pantalla en [.claude/skills/moodle-grading/log-instructions.md](.claude/skills/moodle-grading/log-instructions.md) (Informes → Registros → Conseguir estos registros → Descargar como .csv → guardar en el workspace) — y pídale al agente que genere `Users.md`, o córralo usted:
 
 ```bash
-python .cursor/skills/moodle-grading/scripts/extract_users.py "Logs Usuarios.csv" -o Users.md
+python .claude/skills/moodle-grading/scripts/extract_users.py "Logs Usuarios.csv" -o Users.md
 ```
 
 ### 3.5 Iniciar la calificación
 
-Dígale al agente de Cursor algo como:
+Escriba el comando del skill con el curso y la tarea:
 
-> «Quiero calificar la tarea con cmid 517559 del curso 8067»
+> `/moodle-grading 8067 517559`
+
+o simplemente: «Quiero calificar la tarea con cmid 517559 del curso 8067».
 
 El agente seguirá el flujo del skill:
 
@@ -163,9 +197,9 @@ El agente seguirá el flujo del skill:
 2. Verifica o genera `Users.md`.
 3. Descarga las entregas a `submissions/assignments/assignment_<cmid>/user_<id>/` (PDF, imágenes y ZIPs; los ZIP se extraen a `_extracted/`).
 4. Le pide confirmar el PDF de la consigna.
-5. **Le presenta la rúbrica resumida** (todos los rubros con sus valores permitidos) y **espera su aprobación** antes de calificar. Si la consigna no trae rúbrica, le propondrá una para que la apruebe.
-6. Califica cada entrega y escribe `grade_<userid>.txt` en la carpeta del estudiante.
-7. Genera el resumen global.
+5. **Le presenta la rúbrica resumida** (todos los rubros con sus valores permitidos) y **espera su aprobación** antes de calificar. Si la consigna no trae rúbrica, le propondrá una para que la apruebe. La rúbrica aprobada se guarda en `rubric.json`.
+6. Califica cada entrega (un subagente por estudiante, hasta 5 en paralelo), escribe `grade_<userid>.txt` en la carpeta del estudiante y lo valida contra `rubric.json`.
+7. Genera el resumen global (`build_summary.py`).
 
 ### 3.6 Validar los resultados
 
@@ -176,6 +210,7 @@ Al terminar, revise estos archivos (todos bajo `submissions/assignments/assignme
 | `user_<id>/grade_<userid>.txt` | Nota por rubro, nota total y párrafo de retroalimentación de cada estudiante. |
 | `grading_summary.csv` | Tabla maestra: una fila por estudiante con nota y estado (`calificado`, `sin_entrega`, `omitido_sin_pdf`, etc.). |
 | `grading_resumen_global.md` | Informe legible con la tabla completa **y la sección «Casos que pueden requerir revisión del profesor»**. |
+| `rubric.json` / `consigna.md` | La rúbrica y la consigna tal como fueron aprobadas; son la referencia con la que se validó cada nota. |
 
 **Recomendación de validación mínima:** lea la sección de casos límite del resumen global y compare esas entregas contra el PDF real del estudiante; haga además un muestreo de 2-3 notas al azar. La calificación asistida es un borrador — **la decisión final siempre es del profesor**. Si no está de acuerdo con una nota, edite el `grade_<userid>.txt` (o pídale al agente que recalifique esa entrega) antes de subir nada.
 
@@ -185,20 +220,21 @@ Una vez validadas las notas, puede volcarlas al calificador de Moodle (nota + p�
 
 ```bash
 # Probar primero con un estudiante; dry-run es el valor predeterminado:
-python .cursor/skills/moodle-grading/scripts/moodle_upload_grades.py --assignment <CMID> --user <USERID>
+python .claude/skills/moodle-grading/scripts/moodle_upload_grades.py --assignment <CMID> --user <USERID>
 
 # Si se ve bien, --commit habilita la escritura:
-python .cursor/skills/moodle-grading/scripts/moodle_upload_grades.py --assignment <CMID> --user <USERID> --commit
+python .claude/skills/moodle-grading/scripts/moodle_upload_grades.py --assignment <CMID> --user <USERID> --commit
 
 # Comprobar el lote completo y repetir con --commit solo tras revisarlo:
-python .cursor/skills/moodle-grading/scripts/moodle_upload_grades.py --assignment <CMID> --users-file Users.md
+python .claude/skills/moodle-grading/scripts/moodle_upload_grades.py --assignment <CMID> --users-file Users.md
 ```
 
-> Un puntaje que no coincide exactamente con un nivel de Moodle falla de forma
+> Claude Code nunca debe usar `--commit` sin su autorización explícita en esa
+> ejecución. Un puntaje que no coincide exactamente con un nivel de Moodle falla de forma
 > segura. `--allow-approximate` permite el nivel más cercano únicamente como
 > excepción explícita; revíselo antes de combinarlo con `--commit`.
 
-La referencia completa de todos los scripts (parámetros, formatos, solución de problemas) está en [.cursor/skills/moodle-grading/reference.md](.cursor/skills/moodle-grading/reference.md).
+La referencia completa de todos los scripts (parámetros, formatos, solución de problemas) está en [.claude/skills/moodle-grading/reference.md](.claude/skills/moodle-grading/reference.md).
 
 ---
 

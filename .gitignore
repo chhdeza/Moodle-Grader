@@ -54,3 +54,7 @@ https___*.htm
 https___*.html
 # Internal analysis scratch dir
 _analysis/
+
+# Claude Code local overrides
+.claude/settings.local.json
+CLAUDE.local.md

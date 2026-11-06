@@ -5,7 +5,7 @@ from conftest import load_script
 
 upload = load_script(
     "moodle_upload_grades",
-    ".cursor/skills/moodle-grading/scripts/moodle_upload_grades.py",
+    ".claude/skills/moodle-grading/scripts/moodle_upload_grades.py",
 )
 
 

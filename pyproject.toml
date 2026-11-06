@@ -1,7 +1,7 @@
 [project]
 name = "moodle-grader"
 version = "0.1.0"
-description = "Cursor skill and Python utilities for Moodle-assisted grading"
+description = "Claude Code skill and Python utilities for Moodle-assisted grading"
 requires-python = ">=3.10"
 
 [tool.pytest.ini_options]

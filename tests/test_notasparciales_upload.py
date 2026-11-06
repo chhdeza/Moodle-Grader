@@ -35,7 +35,7 @@ def test_uploader_copies_remain_identical():
     standalone = Path(ROOT, "grade-uploader/notasparciales_upload.py").read_bytes()
     skill_copy = Path(
         ROOT,
-        ".cursor/skills/moodle-grading/scripts/notasparciales_upload.py",
+        ".claude/skills/moodle-grading/scripts/notasparciales_upload.py",
     ).read_bytes()
 
     assert standalone == skill_copy

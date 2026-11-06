@@ -6,7 +6,7 @@ from conftest import load_script
 
 extract_users = load_script(
     "extract_users",
-    ".cursor/skills/moodle-grading/scripts/extract_users.py",
+    ".claude/skills/moodle-grading/scripts/extract_users.py",
 )
 
 

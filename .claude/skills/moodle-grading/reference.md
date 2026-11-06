@@ -1,8 +1,38 @@
 # Reference — Moodle Grading Skill
 
-All scripts live at `.cursor/skills/moodle-grading/scripts/`. Run them from the workspace root.
+All scripts live at `.claude/skills/moodle-grading/scripts/`. Run them from the workspace root.
 
 ## Scripts
+
+### check_env.py
+
+Reports which required `.env` variables are set **without printing any secret** (only `MOODLE_URL`, which is not secret, is echoed). Exit code 1 if anything is missing or malformed. Use it instead of reading `.env`.
+
+```bash
+python .claude/skills/moodle-grading/scripts/check_env.py
+python .claude/skills/moodle-grading/scripts/check_env.py --env path/to/.env
+```
+
+---
+
+### build_summary.py
+
+Mechanical enforcement of the strict-scale rule plus the Paso 7 report. Reads `rubric.json` (see [File Formats](#rubricjson)) and reuses the `grade_<userid>.txt` parser of `moodle_upload_grades.py`, so grading and upload agree on the format.
+
+```bash
+# Students that still need grading (TSV: userid, name, folder); triage counts on stderr
+python .claude/skills/moodle-grading/scripts/build_summary.py --assignment-dir submissions/assignments/assignment_517559 --users-file Users.md --list-pending
+
+# Validate one grade file (exit 1 on any ERROR)
+python .claude/skills/moodle-grading/scripts/build_summary.py --rubric submissions/assignments/assignment_517559/rubric.json --validate submissions/assignments/assignment_517559/user_3081/grade_3081.txt
+
+# Build grading_summary.csv + grading_resumen_global.md (exit 1 if anything is ungraded/invalid)
+python .claude/skills/moodle-grading/scripts/build_summary.py --assignment-dir submissions/assignments/assignment_517559 --users-file Users.md
+```
+
+Validation checks: same number/order/name of rubric rows as `rubric.json`; every score in that row's allowed `valores`; `Nota total` equals the exact sum of the table; declared maximum equals the sum of rubric maxima; exactly one feedback paragraph; the student's name absent from the feedback (error if two or more name tokens appear, warning for one); no mention of weeks/schedules (warning). Options: `--flags FILE` (default `<assignment-dir>/review_flags.json`), `--margin PCT` (borderline band around `nota_aprobacion`, default 5 % of the maximum).
+
+---
 
 ### moodle_download.py
 
@@ -21,22 +51,22 @@ Downloads student submission files from Moodle assignments.
 
 ```bash
 # List in-progress courses
-python .cursor/skills/moodle-grading/scripts/moodle_download.py --in-progress
+python .claude/skills/moodle-grading/scripts/moodle_download.py --in-progress
 
 # Show structure for a specific course
-python .cursor/skills/moodle-grading/scripts/moodle_download.py --in-progress --course 8067
+python .claude/skills/moodle-grading/scripts/moodle_download.py --in-progress --course 8067
 
 # Download submissions for all students
-python .cursor/skills/moodle-grading/scripts/moodle_download.py --course 8067 --assignment 517559 --users-file Users.md
+python .claude/skills/moodle-grading/scripts/moodle_download.py --course 8067 --assignment 517559 --users-file Users.md
 
 # Download for a single student
-python .cursor/skills/moodle-grading/scripts/moodle_download.py --course 8067 --assignment 517559 --user 3081
+python .claude/skills/moodle-grading/scripts/moodle_download.py --course 8067 --assignment 517559 --user 3081
 
 # With group filter and custom output directory
-python .cursor/skills/moodle-grading/scripts/moodle_download.py --course 8067 --assignment 517559 --users-file Users.md --group 38525 --download-dir hw2
+python .claude/skills/moodle-grading/scripts/moodle_download.py --course 8067 --assignment 517559 --users-file Users.md --group 38525 --download-dir hw2
 
 # Debug mode
-python .cursor/skills/moodle-grading/scripts/moodle_download.py --course 8067 --assignment 517559 --user 655 --debug
+python .claude/skills/moodle-grading/scripts/moodle_download.py --course 8067 --assignment 517559 --user 655 --debug
 ```
 
 #### Output structure
@@ -57,6 +87,9 @@ submissions/
         │   │   └── evidencias/
         │   │       └── extra.png
         │   └── grade_3081.txt       ← created during grading
+        ├── consigna.md              ← Paso 5: transcription of the assignment requirements
+        ├── rubric.json              ← Paso 5: approved rubric (items, order, allowed scores)
+        ├── review_flags.json        ← Paso 6/7: cases flagged for professor review
         ├── grading_summary.csv      ← all students, one row each
         └── grading_resumen_global.md
 ```
@@ -76,10 +109,10 @@ Extracts distinct student user IDs from Moodle log CSV files.
 
 ```bash
 # Basic usage (auto-detects course name from CSV)
-python .cursor/skills/moodle-grading/scripts/extract_users.py log1.csv log2.csv
+python .claude/skills/moodle-grading/scripts/extract_users.py log1.csv log2.csv
 
 # With explicit course name and output file
-python .cursor/skills/moodle-grading/scripts/extract_users.py *.csv --course-name "TELEMATICA Y REDES" -o Users.md
+python .claude/skills/moodle-grading/scripts/extract_users.py *.csv --course-name "TELEMATICA Y REDES" -o Users.md
 ```
 
 #### How it works
@@ -95,13 +128,13 @@ python .cursor/skills/moodle-grading/scripts/extract_users.py *.csv --course-nam
 Extrae archivos `.zip` en la carpeta de entrega de un estudiante hacia `_extracted/<nombre_sanitizado>/` con protección contra zip-slip, enlaces simbólicos y bombas ZIP. Los límites predeterminados son 200 MB descomprimidos y 10 000 entradas.
 
 ```bash
-python .cursor/skills/moodle-grading/scripts/extract_submission_zip.py submissions/assignments/assignment_517559/user_3081
+python .claude/skills/moodle-grading/scripts/extract_submission_zip.py submissions/assignments/assignment_517559/user_3081
 
 # Ajustar límite (MB)
-python .cursor/skills/moodle-grading/scripts/extract_submission_zip.py path/to/folder --max-mb 200
+python .claude/skills/moodle-grading/scripts/extract_submission_zip.py path/to/folder --max-mb 200
 
 # Ajustar también el máximo de entradas
-python .cursor/skills/moodle-grading/scripts/extract_submission_zip.py path/to/folder --max-files 5000
+python .claude/skills/moodle-grading/scripts/extract_submission_zip.py path/to/folder --max-files 5000
 ```
 
 - Si la carpeta `_extracted/<nombre>/` ya tiene contenido, ese ZIP se omite (no sobrescribe).
@@ -133,9 +166,36 @@ Required columns:
 - `Descripción` — contains `The user with id 'NNNN'`
 - `Contexto del evento` — contains `Curso: COURSE_NAME` (used for auto-detection)
 
+### rubric.json
+
+Written at Paso 5 from the rubric the user approved; the single source of truth for graders and for `build_summary.py`. Row order must match the order of the criteria in Moodle (the upload is positional).
+
+```json
+{
+  "curso": "CURSO DE EJEMPLO (00000)",
+  "nota_aprobacion": 70,
+  "items": [
+    {"rubro": "Portada", "max": 3, "valores": [0, 3]},
+    {"rubro": "Ejercicios de conversión", "max": 10}
+  ]
+}
+```
+
+- `valores` — the **only** scores allowed for that row. Omitted → integers `0..max`.
+- `nota_aprobacion` — optional; enables the automatic «zona límite» flag.
+
+### review_flags.json
+
+Optional; keyed by User ID. `revisar` becomes a row in the «Casos que pueden requerir revisión del profesor» section; `estado` may override the status to `error_pdf_corrupto` or `error_ilegible`.
+
+```json
+{"3081": {"revisar": "Evidencia ambigua entre el PDF y el ZIP."},
+ "7916": {"estado": "error_pdf_corrupto", "revisar": "PDF corrupto; se asignó 0."}}
+```
+
 ### grading_summary.csv
 
-Generated after grading completes. **One row per student** (everyone in the batch, including skipped or error states). Headers in Spanish. Use as the master table for grades before optional Moodle import.
+Generated by `build_summary.py` after grading completes. **One row per student** (everyone in the batch, including skipped or error states). Headers in Spanish. Use as the master table for grades before optional Moodle import.
 
 ```csv
 User ID,Nombre Estudiante,Nota,Nota Máxima,Estado
@@ -145,7 +205,7 @@ User ID,Nombre Estudiante,Nota,Nota Máxima,Estado
 7916,MARIA EJEMPLO ROJAS,0,101,error_pdf_corrupto
 ```
 
-Status values: `calificado`, `sin_entrega`, `omitido_sin_pdf`, `error_pdf_corrupto`, `error_ilegible`.
+Status values: `calificado`, `sin_entrega`, `omitido_sin_pdf`, `error_pdf_corrupto`, `error_ilegible`; plus `error_formato` (grade file failed validation) and `pendiente` (PDF not graded yet), which make `build_summary.py` exit non-zero.
 
 ### grading_resumen_global.md
 
@@ -201,3 +261,6 @@ El trabajo presenta una estructura académica completa...
 | Script fails mid-batch | Network timeout | Re-run the same command; existing folders get overwritten |
 | ZIP no extrae | Contraseña o corrupto | Revisar mensaje del script; reflejar en retroalimentación y rúbrica |
 | Evidencia “no vista” | Solo se revisó el PDF | Revisar imágenes en la carpeta y `_extracted/` tras extraer ZIP |
+| `build_summary.py` → `ERROR … no permitido` | Puntaje fuera de la escala de `rubric.json` | Corregir el `grade_<id>.txt` a un valor permitido (o corregir `rubric.json` si la escala aprobada era otra) |
+| `build_summary.py` → `Nota total ≠ suma` | Suma mal calculada | Recalcular y reescribir la nota total |
+| Los agentes calificadores no corren | Subagente no disponible | Calificar en serie siguiendo `.claude/agents/moodle-grader.md` |

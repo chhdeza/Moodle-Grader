@@ -35,7 +35,7 @@ Guarde el CSV en la raíz del workspace con un nombre que quede excluido por
 Luego genere la lista de estudiantes:
 
 ```bash
-python .cursor/skills/moodle-grading/scripts/extract_users.py "Logs Usuarios.csv" -o Users.md
+python .claude/skills/moodle-grading/scripts/extract_users.py "Logs Usuarios.csv" -o Users.md
 ```
 
 ## Formato esperado del CSV

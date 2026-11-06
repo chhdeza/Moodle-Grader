@@ -16,10 +16,10 @@ Workflow:
   6. Build the grade form. POST only when --commit is explicitly provided.
 
 Usage (run from workspace root):
-    python .cursor/skills/moodle-grading/scripts/moodle_upload_grades.py \\
+    python .claude/skills/moodle-grading/scripts/moodle_upload_grades.py \\
         --assignment CMID --user USERID [--commit]
 
-    python .cursor/skills/moodle-grading/scripts/moodle_upload_grades.py \\
+    python .claude/skills/moodle-grading/scripts/moodle_upload_grades.py \\
         --assignment CMID --users-file Users.md [--commit]
 
 Environment (.env):

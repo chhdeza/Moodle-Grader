@@ -22,13 +22,13 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements-dev.txt
       - name: Compile Python sources
-        run: python -m compileall -q .cursor/skills/moodle-grading/scripts grade-uploader tests
+        run: python -m compileall -q .claude/skills/moodle-grading/scripts grade-uploader tests
       - name: Lint
         run: python -m ruff check .
       - name: Test
         run: python -m pytest
       - name: Verify uploader copies match
-        run: cmp grade-uploader/notasparciales_upload.py .cursor/skills/moodle-grading/scripts/notasparciales_upload.py
+        run: cmp grade-uploader/notasparciales_upload.py .claude/skills/moodle-grading/scripts/notasparciales_upload.py
 
   secrets:
     runs-on: ubuntu-latest

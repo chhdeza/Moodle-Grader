@@ -7,7 +7,7 @@ from conftest import load_script
 
 extractor = load_script(
     "extract_submission_zip",
-    ".cursor/skills/moodle-grading/scripts/extract_submission_zip.py",
+    ".claude/skills/moodle-grading/scripts/extract_submission_zip.py",
 )
 
 
